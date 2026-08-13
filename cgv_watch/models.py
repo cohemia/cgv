@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from urllib.parse import urlencode
 
-BASE_URL = "http://www.cgv.co.kr"
+# CGV_BASE_URL 로 바꿀 수 있다. 로컬 목 서버(tools/mock_cgv_server.py)로 전체 흐름을
+# 실제 사이트 없이 돌려보기 위한 장치.
+BASE_URL = os.environ.get("CGV_BASE_URL", "http://www.cgv.co.kr").rstrip("/")
 
 
 @dataclass(frozen=True)

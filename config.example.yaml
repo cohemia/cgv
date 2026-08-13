@@ -28,6 +28,8 @@ booking:
   headless: false               # 반드시 false — 결제는 사람이 직접 눌러야 함
   step_timeout_seconds: 20
   screenshot_dir: "screenshots"
+  # playwright 가 설치한 브라우저 대신 특정 크롬을 쓰고 싶을 때만 지정
+  # browser_executable: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
   # 예매 딥링크를 직접 지정하고 싶을 때 (비워두면 기본 형식 사용)
   # url_template: "http://www.cgv.co.kr/ticket/?THEATER_CD={theater_code}&PLAY_YMD={play_ymd}&SCREEN_CD={screen_code}&PLAY_NUM={play_num}&MOVIE_CD={movie_idx}"

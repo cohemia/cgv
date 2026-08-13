@@ -188,6 +188,27 @@ docker compose logs -f
 
 ---
 
+## 실제 CGV 없이 전 과정 돌려보기 (데모)
+
+CGV를 흉내 낸 로컬 목 서버가 들어 있습니다. 실제 예매 시즌이 오기 전에
+"빈자리 감지 → 알림 → 좌석 클릭 → 결제 직전 정지"가 내 PC에서 이어지는지 확인할 수 있습니다.
+
+```bash
+# 터미널 1 — 목 CGV (3번째 폴링부터 12석이 열리도록)
+python tools/mock_cgv_server.py --port 8899 --open-after 2 --seats 12
+
+# 터미널 2 — 감시기를 목 서버로 붙여서 실행
+cp presets/odyssey-yongsan-20260814.yaml demo.yaml   # dates 를 미래 날짜로 바꿔두세요
+CGV_BASE_URL=http://127.0.0.1:8899 python -m cgv_watch watch -c demo.yaml
+```
+
+두어 번 폴링이 조용히 지나간 뒤 알림이 뜨고, 브라우저가 떠서 좌석을 고르고,
+결제 화면에서 멈춥니다. 각 단계 스크린샷은 `screenshots/` 에 남습니다.
+
+`CGV_BASE_URL` 은 데모 전용 환경변수입니다. 평소에는 설정하지 마세요.
+
+---
+
 ## 문제 해결
 
 ### 파싱이 안 될 때

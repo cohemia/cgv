@@ -139,6 +139,8 @@ class BookingConfig:
     step_timeout_seconds: float = 20.0
     screenshot_dir: str = "screenshots"
     url_template: str = ""
+    # 크롬/크로미움 실행 파일 경로. 비우면 playwright 가 설치한 브라우저를 쓴다.
+    browser_executable: str = ""
     selectors: dict = field(default_factory=dict)
 
 

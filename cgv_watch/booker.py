@@ -18,11 +18,11 @@ from datetime import datetime
 from pathlib import Path
 
 from .config import BookingConfig
-from .models import Showtime
+from .models import BASE_URL, Showtime
 
 log = logging.getLogger(__name__)
 
-LOGIN_URL = "http://www.cgv.co.kr/user/login/"
+LOGIN_URL = f"{BASE_URL}/user/login/"
 
 # 기본 셀렉터 후보. 앞에서부터 순서대로 시도해 처음 보이는 것을 쓴다.
 DEFAULT_SELECTORS: dict[str, list[str]] = {
@@ -138,7 +138,7 @@ class Booker:
     def _launch(self, p, headless: bool):
         profile = Path(self.cfg.user_data_dir).expanduser()
         profile.mkdir(parents=True, exist_ok=True)
-        return p.chromium.launch_persistent_context(
+        kwargs = dict(
             user_data_dir=str(profile),
             headless=headless,
             locale="ko-KR",
@@ -146,6 +146,9 @@ class Booker:
             viewport={"width": 1400, "height": 1000},
             args=["--disable-blink-features=AutomationControlled"],
         )
+        if self.cfg.browser_executable:
+            kwargs["executable_path"] = self.cfg.browser_executable
+        return p.chromium.launch_persistent_context(**kwargs)
 
     def _booking_url(self, showtime: Showtime) -> str:
         if self.cfg.url_template:
@@ -288,9 +291,10 @@ class Booker:
 
         page.wait_for_timeout(2000)
         if self._visible_any(page, self.selectors["payment_marker"], timeout=8000):
+            # 알림은 평문으로 나가므로 마크다운 강조(**)를 쓰지 않는다 — 그대로 노출된다.
             return BookResult(
                 "payment_ready",
-                f"{clicked}석 선택 + 결제 페이지 진입 완료. **결제는 직접 확인하고 눌러주세요.**",
+                f"{clicked}석 선택 완료 → 결제 화면까지 진입했습니다. 결제 버튼은 직접 눌러주세요!",
             )
         return BookResult("seats_selected", f"{clicked}석 선택 완료. 다음 단계를 직접 진행하세요.")
 
