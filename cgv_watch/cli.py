@@ -99,6 +99,56 @@ def cmd_dump(args) -> int:
     return 0
 
 
+def verify_login_session(booking_cfg) -> tuple[bool, str]:
+    """저장된 프로필이 실제로 CGV 로그인 상태인지 확인한다.
+
+    프로필 폴더가 있다는 것만으로는 부족하다. `login` 을 실행했다가 로그인을 끝내지
+    않았거나 세션이 만료된 경우에도 폴더는 남아 있어서, 정작 새벽에 빈자리가 났을 때
+    로그인 화면에서 멈춘다. 그래서 실제로 페이지를 열어 확인한다.
+    """
+    from .models import BASE_URL
+
+    profile = Path(booking_cfg.user_data_dir).expanduser()
+    if not profile.is_dir() or not any(profile.iterdir()):
+        return False, "`./cgv login` 을 먼저 실행하세요. (평소 쓰는 크롬 로그인과는 별개입니다)"
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return False, "playwright 가 없어 확인하지 못했습니다."
+
+    try:
+        with sync_playwright() as p:
+            kwargs = {
+                "user_data_dir": str(profile),
+                "headless": True,
+                "locale": "ko-KR",
+                "timezone_id": "Asia/Seoul",
+            }
+            if booking_cfg.browser_executable:
+                kwargs["executable_path"] = booking_cfg.browser_executable
+            ctx = p.chromium.launch_persistent_context(**kwargs)
+            try:
+                page = ctx.pages[0] if ctx.pages else ctx.new_page()
+                page.goto(BASE_URL, wait_until="domcontentloaded", timeout=20000)
+                page.wait_for_timeout(1500)
+                html = page.content()
+            finally:
+                ctx.close()
+    except Exception as exc:
+        msg = str(exc)
+        if "ProcessSingleton" in msg or "SingletonLock" in msg or "already in use" in msg:
+            return False, "감시(watch)가 이미 실행 중이라 확인할 수 없습니다. 먼저 종료하세요."
+        return False, f"확인 실패: {msg[:160]}"
+
+    if "로그아웃" in html or "마이페이지" in html:
+        return True, ""
+    return False, (
+        "프로필은 있지만 로그인 상태가 아닙니다 (세션 만료 또는 로그인 미완료). "
+        "`./cgv login` 을 다시 실행하세요."
+    )
+
+
 def extract_chat_ids(payload: dict) -> list[tuple[str, str]]:
     """getUpdates 응답에서 (chat_id, 표시이름) 목록을 뽑는다."""
     found: dict[str, str] = {}
@@ -281,12 +331,8 @@ def cmd_check(args) -> int:
             line(True, "playwright 설치됨")
         except ImportError:
             ok &= line(False, "playwright 미설치", "pip install playwright && playwright install chromium")
-        profile = Path(cfg.booking.user_data_dir).expanduser()
-        ok &= line(
-            profile.is_dir() and any(profile.iterdir()),
-            "CGV 로그인 세션",
-            "" if profile.is_dir() else "`python -m cgv_watch login` 을 먼저 실행하세요.",
-        )
+        logged_in, why = verify_login_session(cfg.booking)
+        ok &= line(logged_in, "CGV 로그인 세션 (실제 접속해서 확인)", why)
         if cfg.booking.seat_count != cfg.targets[0].min_seats:
             line(
                 False,
