@@ -34,6 +34,8 @@ class Watcher:
         self.was_available: dict[str, bool] = {}
         # 회차 키 -> 마지막 알림 시각(쿨다운용)
         self.last_alert: dict[str, float] = {}
+        # 조건 불일치 경고를 이미 보낸 (타깃, 날짜)
+        self._warned_no_match: set[str] = set()
         self._booking_lock = threading.Lock()
         self._booking_thread: threading.Thread | None = None
         self._state_path = Path(config.state_file) if config.state_file else None
@@ -147,6 +149,7 @@ class Watcher:
                 len(showtimes),
                 len(matched),
             )
+            self._warn_if_no_match(target, play_ymd, showtimes, matched)
             for st in matched:
                 if st.start_dt < now:
                     continue  # 이미 시작한 회차
@@ -155,6 +158,36 @@ class Watcher:
                 if self._handle(st, target):
                     hits += 1
         return hits
+
+    def _warn_if_no_match(self, target: Target, play_ymd: str, showtimes, matched) -> None:
+        """조건에 걸리는 회차가 아예 없으면 크게 알린다.
+
+        밤새 감시를 돌렸는데 알고 보니 극장 코드나 영화명이 틀려서 알림이
+        한 번도 오지 않는 것이 가장 나쁜 실패다. 조용히 넘어가면 안 된다.
+        """
+        mark = f"{target.name}:{play_ymd}"
+        if matched or mark in self._warned_no_match:
+            return
+        self._warned_no_match.add(mark)
+        movies = sorted({s.movie_name for s in showtimes if s.movie_name})
+        detail = (
+            f"'{target.movie_contains or '전체'}' / '{target.screen_contains or '전체'}' / "
+            f"{target.time_from or '00:00'}~{target.time_to or '23:59'}"
+        )
+        log.warning(
+            "⚠️  [%s] %s — 조건(%s)에 걸리는 회차가 0개입니다. 이대로면 알림이 오지 않습니다.\n"
+            "     그 날 상영 중인 영화: %s\n"
+            "     `python -m cgv_watch check` 로 확인하세요.",
+            target.name,
+            play_ymd,
+            detail,
+            ", ".join(movies[:8]) or "(상영시간표를 읽지 못했습니다)",
+        )
+        self.notifier.send(
+            title="⚠️ 감시 조건에 걸리는 회차가 없습니다",
+            body=f"[{target.name}] {play_ymd}\n조건: {detail}\n"
+            f"이대로 두면 빈자리가 나도 알림이 오지 않습니다. 설정을 확인하세요.",
+        )
 
     def _handle(self, st: Showtime, target: Target) -> bool:
         available = st.seat_remain >= target.min_seats
