@@ -76,8 +76,16 @@ fi
 echo
 echo "════════ 설치 끝. 이제 아래를 순서대로 ════════"
 echo
-echo "  source .venv/bin/activate       # 창을 새로 열 때마다 매번"
+echo "  source .venv/bin/activate            # 창을 새로 열 때마다 매번"
 echo "  python -m cgv_watch check --notify   # ① 설정 점검 (전부 ✅ 나와야 함)"
 echo "  python -m cgv_watch login            # ② 브라우저에 직접 CGV 로그인"
-echo "  python -m cgv_watch watch            # ③ 감시 시작 — 창을 켜둔 채로"
+if [ "$(uname)" = "Darwin" ]; then
+  echo "  caffeinate -i python -m cgv_watch watch   # ③ 감시 시작"
+  echo
+  echo "  ⚠️  맥은 잠자기에 들어가면 감시가 멈춥니다."
+  echo "     위처럼 caffeinate -i 를 앞에 붙여야 밤새 돌아갑니다."
+  echo "     덮개를 닫으면 그래도 잠드니, 덮개는 열어두세요."
+else
+  echo "  python -m cgv_watch watch            # ③ 감시 시작 — 창을 켜둔 채로"
+fi
 echo

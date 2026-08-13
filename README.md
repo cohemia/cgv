@@ -169,6 +169,19 @@ python -m cgv_watch check --notify
 python -m cgv_watch watch
 ```
 
+### macOS 에서 밤새 돌릴 때
+
+맥은 잠자기에 들어가면 폴링이 멈춥니다. `caffeinate -i` 를 앞에 붙이세요.
+
+```bash
+caffeinate -i python -m cgv_watch watch
+```
+
+- **덮개를 닫으면 `caffeinate` 를 써도 잠듭니다.** 덮개는 열어두세요.
+- 전원 어댑터를 꽂아두세요. 배터리로는 몇 시간 못 갑니다.
+- 데스크탑 알림이 안 뜨면 `시스템 설정 → 알림` 에서 **터미널**을 허용해주세요.
+  (텔레그램 알림은 이와 무관하게 옵니다.)
+
 ---
 
 ## 동작 방식
