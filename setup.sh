@@ -13,6 +13,20 @@ for c in python3 python; do
     PY="$c"; break
   fi
 done
+if [ -z "$PY" ] && [ "$(uname)" = "Darwin" ] &&
+   python3 --version 2>&1 | grep -q "Xcode and Apple SDKs license"; then
+  # 맥에서 git·python3 은 Xcode 도구 모음의 껍데기라, 사용권에 동의하기 전에는
+  # "파이썬이 없다"가 아니라 "실행 자체가 막힌" 상태가 된다. 메시지를 구분해준다.
+  echo "❌ Xcode 사용권에 동의하지 않아 파이썬(과 git)이 실행되지 않습니다."
+  echo
+  echo "   아래 한 줄을 먼저 실행하세요. 맥 로그인 비밀번호를 물어봅니다"
+  echo "   (입력해도 화면에 아무것도 안 보이는 게 정상입니다):"
+  echo
+  echo "       sudo xcodebuild -license accept"
+  echo
+  echo "   그 다음 이 스크립트를 다시 실행하세요:  bash setup.sh"
+  exit 1
+fi
 if [ -z "$PY" ]; then
   echo "❌ 파이썬 3.9 이상이 없습니다."
   echo "   macOS:  brew install python3   (또는 https://www.python.org/downloads/ 에서 설치)"

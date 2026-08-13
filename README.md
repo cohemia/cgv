@@ -263,6 +263,19 @@ CGV_BASE_URL=http://127.0.0.1:8899 python -m cgv_watch watch -c demo.yaml
 
 ## 문제 해결
 
+### macOS: "You have not agreed to the Xcode and Apple SDKs license"
+
+`git clone` 을 하자마자 긴 약관이 쏟아지고 아무것도 안 받아진다면 이 경우입니다.
+맥의 `git` 과 `python3` 은 Xcode 개발자 도구의 껍데기라, 사용권에 동의하기 전에는
+**둘 다 실행되지 않습니다.** 한 줄로 해결됩니다.
+
+```bash
+sudo xcodebuild -license accept
+```
+
+맥 로그인 비밀번호를 물어봅니다. 입력해도 화면에 아무것도 안 보이는 게 정상이니
+그냥 치고 Enter 하세요. 그 뒤 `git --version` 이 정상 출력되면 해결된 것입니다.
+
 ### 파싱이 안 될 때
 
 `회차를 하나도 못 읽었습니다` 로그가 뜨면 원본 HTML을 떠서 확인합니다.
