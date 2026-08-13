@@ -32,8 +32,8 @@
 
 ```bash
 cp presets/odyssey-yongsan-20260814.yaml config.yaml
-python -m cgv_watch check --notify   # ← 실전 투입 전 자가진단 (아래 참고)
-python -m cgv_watch watch
+./cgv check --notify   # ← 실전 투입 전 자가진단 (아래 참고)
+./cgv watch
 ```
 
 | 프리셋 | 대상 |
@@ -66,11 +66,19 @@ cp .env.example .env
 ```
 </details>
 
-설치 후 새 터미널을 열 때마다 가상환경을 켜야 합니다.
+설치 후에는 `./cgv` 로 실행하세요. 가상환경을 알아서 켜주므로
+`source .venv/bin/activate` 를 매번 기억할 필요가 없습니다.
+macOS 에서는 `./cgv watch` 에 잠자기 방지(caffeinate)도 자동으로 걸립니다.
 
 ```bash
-source .venv/bin/activate      # 윈도우: .venv\Scripts\activate
+./cgv check --notify
+./cgv login
+./cgv watch
 ```
+
+`./cgv <명령>` 도 그대로 동작합니다. 단, 그 경우엔 가상환경을
+직접 켜야 합니다 (`source .venv/bin/activate`). 켜지 않으면 맥에서는
+`command not found: python` 이 납니다.
 
 ---
 
@@ -79,7 +87,7 @@ source .venv/bin/activate      # 윈도우: .venv\Scripts\activate
 ### 1) 극장 코드 찾기
 
 ```bash
-python -m cgv_watch theaters 용산
+./cgv theaters 용산
 # 0013    CGV 용산아이파크몰
 ```
 
@@ -88,7 +96,7 @@ python -m cgv_watch theaters 용산
 ### 2) 감시할 회차가 잡히는지 확인
 
 ```bash
-python -m cgv_watch showtimes --theater 0013 --date 2026-08-20 --movie 아바타 --urls
+./cgv showtimes --theater 0013 --date 2026-08-20 --movie 아바타 --urls
 # 🔴 아바타: 불과 재 | IMAX 2D 1관 | 08/20 19:00~22:00 | 0석/620
 # 🟢 아바타: 불과 재 | IMAX 2D 1관 | 08/20 22:30~01:30 | 12석/620
 ```
@@ -110,7 +118,7 @@ TELEGRAM_CHAT_ID=987654321
 확인:
 
 ```bash
-python -m cgv_watch test-notify
+./cgv test-notify
 ```
 
 ### 4) 감시 대상 적기 (`config.yaml`)
@@ -130,7 +138,7 @@ targets:
 ### 5) CGV 로그인 (자동 예매를 쓸 경우)
 
 ```bash
-python -m cgv_watch login
+./cgv login
 ```
 
 브라우저가 뜨면 **직접** 로그인하고 터미널에서 Enter. 세션은 `.playwright/cgv-profile` 에
@@ -143,7 +151,7 @@ python -m cgv_watch login
 `check` 는 실제 CGV에 접속해 극장 코드·회차 매칭·알림·로그인 세션까지 한 번에 확인합니다.
 
 ```bash
-python -m cgv_watch check --notify
+./cgv check --notify
 ```
 
 ```
@@ -166,16 +174,13 @@ python -m cgv_watch check --notify
 알림이 오지 않습니다. 여기서 잡으세요. 전부 ✅ 면 시작합니다.
 
 ```bash
-python -m cgv_watch watch
+./cgv watch
 ```
 
 ### macOS 에서 밤새 돌릴 때
 
-맥은 잠자기에 들어가면 폴링이 멈춥니다. `caffeinate -i` 를 앞에 붙이세요.
-
-```bash
-caffeinate -i python -m cgv_watch watch
-```
+맥은 잠자기에 들어가면 폴링이 멈춥니다. `./cgv watch` 는 잠자기 방지(`caffeinate -i`)를
+자동으로 걸어주므로 따로 신경 쓸 필요가 없습니다.
 
 - **덮개를 닫으면 `caffeinate` 를 써도 잠듭니다.** 덮개는 열어두세요.
 - 전원 어댑터를 꽂아두세요. 배터리로는 몇 시간 못 갑니다.
@@ -247,11 +252,11 @@ CGV를 흉내 낸 로컬 목 서버가 들어 있습니다. 실제 예매 시즌
 
 ```bash
 # 터미널 1 — 목 CGV (3번째 폴링부터 12석이 열리도록)
-python tools/mock_cgv_server.py --port 8899 --open-after 2 --seats 12
+.venv/bin/python tools/mock_cgv_server.py --port 8899 --open-after 2 --seats 12
 
 # 터미널 2 — 감시기를 목 서버로 붙여서 실행
 cp presets/odyssey-yongsan-20260814.yaml demo.yaml   # dates 를 미래 날짜로 바꿔두세요
-CGV_BASE_URL=http://127.0.0.1:8899 python -m cgv_watch watch -c demo.yaml
+CGV_BASE_URL=http://127.0.0.1:8899 ./cgv watch -c demo.yaml
 ```
 
 두어 번 폴링이 조용히 지나간 뒤 알림이 뜨고, 브라우저가 떠서 좌석을 고르고,
@@ -281,7 +286,7 @@ sudo xcodebuild -license accept
 `회차를 하나도 못 읽었습니다` 로그가 뜨면 원본 HTML을 떠서 확인합니다.
 
 ```bash
-python -m cgv_watch dump --theater 0013 --date 2026-08-20
+./cgv dump --theater 0013 --date 2026-08-20
 # dumps/0013-20260820.html 저장 (회차 0개 파싱됨)
 ```
 
@@ -311,14 +316,14 @@ booking:
 ### 알림이 안 올 때
 
 ```bash
-python -m cgv_watch test-notify -v
+./cgv test-notify -v
 ```
 
 텔레그램은 **봇에게 먼저 말을 걸어야** `chat_id` 가 생깁니다. 이 단계를 빼먹는 경우가 많습니다.
 
 ### 로그인이 자꾸 풀릴 때
 
-`booking.user_data_dir` 이 매번 지워지고 있지 않은지 확인하고, `python -m cgv_watch login`
+`booking.user_data_dir` 이 매번 지워지고 있지 않은지 확인하고, `./cgv login`
 을 다시 실행하세요. CGV 세션은 영구적이지 않아 주기적으로 갱신이 필요합니다.
 
 ---
