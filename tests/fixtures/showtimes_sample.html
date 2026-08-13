@@ -1,0 +1,77 @@
+<!-- CGV 상영시간표 iframe 응답을 흉내 낸 합성 픽스처.
+     실제 CGV 응답으로 검증한 것이 아니라 파서 로직(속성 추출·필터·정렬)을 고정하기 위한 것이다.
+     실제 마크업이 다르면 `python -m cgv_watch dump` 로 받은 HTML을 여기에 넣고 테스트를 갱신하면 된다. -->
+<div class="sect-showtimes">
+  <ul>
+    <li>
+      <div class="col-times">
+        <div class="info-movie">
+          <a href="/movies/detail-view/?midx=88413"><strong>아바타: 불과 재</strong></a>
+        </div>
+        <div class="type-hall">
+          <div class="info-hall">
+            <ul>
+              <li>IMAX 2D</li>
+              <li>1관</li>
+              <li>총 620석</li>
+            </ul>
+          </div>
+          <div class="info-timetable">
+            <ul>
+              <li>
+                <a href="#none" class="btn-reserve"
+                   data-playstarttime="1900" data-playendtime="2200"
+                   data-seatremaincnt="0" data-seatstatuscd="1"
+                   data-theatercode="0013" data-screencode="0001"
+                   data-playymd="20260820" data-playnum="3"
+                   data-movieidx="88413" data-moviecdgroup="88413">
+                  <em>19:00</em><span>0석</span>
+                </a>
+              </li>
+              <li>
+                <a href="#none" class="btn-reserve"
+                   data-playstarttime="2230" data-playendtime="0130"
+                   data-seatremaincnt="12" data-seatstatuscd="1"
+                   data-theatercode="0013" data-screencode="0001"
+                   data-playymd="20260820" data-playnum="4"
+                   data-movieidx="88413" data-moviecdgroup="88413">
+                  <em>22:30</em><span>12석</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </li>
+    <li>
+      <div class="col-times">
+        <div class="info-movie">
+          <a href="/movies/detail-view/?midx=90001"><strong>어떤 다른 영화</strong></a>
+        </div>
+        <div class="type-hall">
+          <div class="info-hall">
+            <ul>
+              <li>2D</li>
+              <li>6관</li>
+              <li>총 100석</li>
+            </ul>
+          </div>
+          <div class="info-timetable">
+            <ul>
+              <li>
+                <a href="#none" class="btn-reserve"
+                   data-playstarttime="1030" data-playendtime="1230"
+                   data-seatremaincnt="45"
+                   data-theatercode="0013" data-screencode="0006"
+                   data-playymd="20260820" data-playnum="1"
+                   data-movieidx="90001">
+                  <em>10:30</em><span>45석</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </li>
+  </ul>
+</div>

@@ -1,0 +1,21 @@
+# secrets / local config
+.env
+config.yaml
+
+# playwright login profile (쿠키·세션이 들어있음 — 절대 커밋 금지)
+.playwright/
+profile/
+
+# runtime artifacts
+*.log
+dumps/
+screenshots/
+state.json
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/

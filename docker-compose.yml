@@ -1,0 +1,13 @@
+services:
+  cgv-watch:
+    build: .
+    container_name: cgv-watch
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./state:/app/state
+    working_dir: /app
+    # 상태 파일을 볼륨에 두어 컨테이너 재시작 시 중복 알림을 막는다
+    command: ["python", "-m", "cgv_watch", "watch", "-c", "/app/config.yaml"]

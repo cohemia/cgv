@@ -1,0 +1,64 @@
+# cp config.example.yaml config.yaml 후 수정하세요. config.yaml 은 .gitignore 됩니다.
+
+poll:
+  interval_seconds: 30          # 폴링 간격. 너무 짧게 두지 마세요(차단·과부하).
+  jitter_seconds: 10            # 매번 0~10초 랜덤 지연 — 규칙적인 요청 패턴을 피함
+  error_backoff_seconds: 60     # 오류 시 첫 대기
+  max_error_backoff_seconds: 600
+  request_timeout: 10
+  stop_when_done: false         # true 면 빈자리 한 번 잡고 종료
+
+notify:
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+  desktop:
+    enabled: true               # 서버/도커에서는 false 권장
+    sound: true
+  console:
+    enabled: true
+
+booking:
+  enabled: true                 # 서버/도커에서는 false (알림만)
+  mode: seat_select             # off | open_only(페이지만 열기) | seat_select(좌석까지 선택)
+  seat_count: 2
+  prefer_adjacent: true         # 붙어 있는 자리 우선
+  user_data_dir: ".playwright/cgv-profile"   # 로그인 세션 저장 위치 (커밋 금지)
+  headless: false               # 반드시 false — 결제는 사람이 직접 눌러야 함
+  step_timeout_seconds: 20
+  screenshot_dir: "screenshots"
+
+  # 예매 딥링크를 직접 지정하고 싶을 때 (비워두면 기본 형식 사용)
+  # url_template: "http://www.cgv.co.kr/ticket/?THEATER_CD={theater_code}&PLAY_YMD={play_ymd}&SCREEN_CD={screen_code}&PLAY_NUM={play_num}&MOVIE_CD={movie_idx}"
+
+  # 셀렉터는 CGV 개편 시 깨질 수 있습니다. 필요한 항목만 덮어쓰면 됩니다.
+  # selectors:
+  #   seat:
+  #     - "a.seat:not(.unable)"
+  #   next_step:
+  #     - "#btnNext"
+
+state_file: "state.json"        # 재시작해도 중복 알림이 안 뜨도록 상태 저장
+
+targets:
+  - name: "아바타 IMAX 용산 주말 저녁"
+    theater_code: "0013"        # `python -m cgv_watch theaters 용산` 으로 확인
+    theater_name: "CGV 용산아이파크몰"   # 알림 메시지에만 쓰임
+    dates:
+      - "2026-08-20"
+      - { from: "today", days: 3 }   # 오늘부터 3일치
+    movie_contains: "아바타"     # 영화명 부분 일치 (비우면 전체)
+    screen_contains: "IMAX"     # 상영관명 부분 일치 (비우면 전체)
+    time_from: "18:00"
+    time_to: "23:59"
+    min_seats: 2                # 이 수 이상 남아야 알림 (2명이면 2)
+    cooldown_minutes: 10        # 같은 회차 재알림 최소 간격
+    auto_book: true             # 이 타깃에서만 자동 예매 끄고 싶으면 false
+
+  # - name: "아무 영화나 오늘 심야"
+  #   theater_code: "0056"
+  #   dates: "today"
+  #   time_from: "22:00"
+  #   min_seats: 1
+  #   auto_book: false
