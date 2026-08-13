@@ -44,20 +44,32 @@ python -m cgv_watch watch
 
 ## 설치
 
-```bash
-git clone <this-repo> && cd cgv
-python3 -m venv .venv && source .venv/bin/activate   # 윈도우: .venv\Scripts\activate
-pip install -r requirements.txt
+**한 번에 설치** — 파이썬 확인, 가상환경, 패키지, 브라우저, 설정 파일, 텔레그램까지 다 잡아줍니다.
 
-# 자동 예매를 쓸 때만
-playwright install chromium
+```bash
+# macOS / Linux
+bash setup.sh
+
+# Windows — 탐색기에서 setup.bat 더블클릭, 또는
+setup.bat
 ```
 
-설정 파일 준비:
+<details>
+<summary>직접 하고 싶다면</summary>
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate   # 윈도우: .venv\Scripts\activate
+pip install -r requirements.txt
+playwright install chromium        # 자동 예매를 쓸 때만
 cp config.example.yaml config.yaml
 cp .env.example .env
+```
+</details>
+
+설치 후 새 터미널을 열 때마다 가상환경을 켜야 합니다.
+
+```bash
+source .venv/bin/activate      # 윈도우: .venv\Scripts\activate
 ```
 
 ---
