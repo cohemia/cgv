@@ -98,6 +98,116 @@ def cmd_dump(args) -> int:
     return 0
 
 
+def cmd_check(args) -> int:
+    """실전 투입 전 자가진단. 실제 CGV에 붙어 설정이 맞는지 한 번에 확인한다."""
+    cfg = _load_config(args.config)
+    ok = True
+
+    def line(passed: bool, label: str, detail: str = "") -> bool:
+        print(f"{'✅' if passed else '❌'} {label}" + (f"\n     {detail}" if detail else ""))
+        return passed
+
+    print("\n══════ CGV 빈자리 감시 자가진단 ══════\n")
+
+    # 1. CGV 접속 + 상영시간표 파싱
+    target = cfg.targets[0]
+    play_ymd = target.dates[0]
+    client = CgvClient(timeout=cfg.poll.request_timeout)
+    showtimes = []
+    try:
+        html = client.fetch_showtimes_html(target.theater_code, play_ymd)
+        ok &= line(True, f"CGV 접속 ({len(html):,} bytes 수신)")
+        showtimes = parse_showtimes(html, target.theater_code, play_ymd)
+        ok &= line(
+            bool(showtimes),
+            f"상영시간표 파싱 — {len(showtimes)}개 회차",
+            "" if showtimes else f"`python -m cgv_watch dump --theater {target.theater_code} "
+            f"--date {play_ymd}` 로 원본을 확인하세요. 휴관일이거나 마크업이 바뀐 것입니다.",
+        )
+    except Exception as exc:
+        ok &= line(False, "CGV 접속", str(exc)[:200])
+
+    # 2. 극장 코드가 실제로 그 극장인지
+    if showtimes:
+        halls = sorted({s.screen_name for s in showtimes if s.screen_name})
+        movies = sorted({s.movie_name for s in showtimes if s.movie_name})
+        line(True, f"극장 {target.theater_code} 상영 중", f"영화: {', '.join(movies[:6])}")
+        line(True, "상영관 종류", ", ".join(halls[:8]) or "(정보 없음)")
+
+    # 3. 타깃 조건에 실제로 걸리는 회차가 있는지 — 가장 자주 틀리는 부분
+    for t in cfg.targets:
+        for ymd in t.dates:
+            try:
+                sts = showtimes if ymd == play_ymd and t is target else client.get_showtimes(
+                    t.theater_code, ymd
+                )
+            except Exception as exc:
+                ok &= line(False, f"[{t.name}] {ymd} 조회", str(exc)[:150])
+                continue
+            matched = filter_showtimes(
+                sts,
+                movie_contains=t.movie_contains,
+                movie_idx=t.movie_idx,
+                screen_contains=t.screen_contains,
+                time_from=t.time_from,
+                time_to=t.time_to,
+            )
+            ok &= line(
+                bool(matched),
+                f"[{t.name}] {ymd} — 조건 일치 {len(matched)}회차",
+                ""
+                if matched
+                else "조건이 너무 좁습니다. movie_contains / screen_contains / "
+                "time_from~time_to 를 넓혀보세요.",
+            )
+            for s in matched:
+                state = f"{s.seat_remain}석 남음" if s.seat_remain else "매진 (감시 대상)"
+                print(f"     · {s.start_hhmm} {s.screen_name} — {state}")
+                if s.seat_remain >= t.min_seats:
+                    print(f"       지금 바로 예매 가능: {s.booking_url()}")
+
+    # 4. 알림 채널
+    notifier = build_notifiers(cfg.notify)
+    if not notifier:
+        ok &= line(False, "알림 채널", "활성화된 채널이 없습니다.")
+    elif args.notify:
+        try:
+            notifier.send("🎟️ 자가진단 알림", "이 메시지가 보이면 알림은 정상입니다.", "")
+            line(True, f"알림 발송 ({len(notifier.notifiers)}개 채널) — 실제로 왔는지 확인하세요")
+        except Exception as exc:
+            ok &= line(False, "알림 발송", str(exc)[:150])
+    else:
+        line(True, f"알림 채널 {len(notifier.notifiers)}개 설정됨 (--notify 로 실제 발송 테스트)")
+
+    # 5. 자동 예매 준비 상태
+    if cfg.booking.enabled and cfg.booking.mode != "off":
+        try:
+            import playwright  # noqa: F401
+
+            line(True, "playwright 설치됨")
+        except ImportError:
+            ok &= line(False, "playwright 미설치", "pip install playwright && playwright install chromium")
+        profile = Path(cfg.booking.user_data_dir).expanduser()
+        ok &= line(
+            profile.is_dir() and any(profile.iterdir()),
+            "CGV 로그인 세션",
+            "" if profile.is_dir() else "`python -m cgv_watch login` 을 먼저 실행하세요.",
+        )
+        if cfg.booking.seat_count != cfg.targets[0].min_seats:
+            line(
+                False,
+                f"인원 불일치 — seat_count={cfg.booking.seat_count}, "
+                f"min_seats={cfg.targets[0].min_seats}",
+                "두 값을 같게 맞추세요. 다르면 1석 알림 받고 2석 잡으려다 실패합니다.",
+            )
+    else:
+        line(True, "자동 예매 꺼짐 — 알림만 동작합니다")
+
+    print("\n" + ("모두 통과. `python -m cgv_watch watch` 로 감시를 시작하세요." if ok
+                  else "❌ 항목을 먼저 해결하세요."))
+    return 0 if ok else 1
+
+
 def cmd_login(args) -> int:
     cfg = _load_config(args.config)
     from .booker import Booker
@@ -152,6 +262,11 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--date", default="today")
     d.add_argument("-o", "--out")
     d.set_defaults(func=cmd_dump)
+
+    ck = sub.add_parser("check", help="실전 투입 전 자가진단 (실제 CGV에 접속해 설정 검증)")
+    ck.add_argument("-c", "--config", default="config.yaml")
+    ck.add_argument("--notify", action="store_true", help="알림도 실제로 한 번 보내본다")
+    ck.set_defaults(func=cmd_check)
 
     lg = sub.add_parser("login", help="브라우저를 띄워 CGV 로그인 세션 저장")
     lg.add_argument("-c", "--config", default="config.yaml")
