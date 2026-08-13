@@ -143,3 +143,37 @@ def test_cooldown_suppresses_repeat_alert():
     assert w._handle(_st(1), target) is True
     w.was_available.clear()                     # 매진→가능 전이를 인위적으로 재현
     assert w._handle(_st(1), target) is False   # 쿨다운 중이라 억제
+
+
+# ------------------------------------------------- 텔레그램 chat id 추출
+
+
+def test_extract_chat_ids_from_private_message():
+    from cgv_watch.cli import extract_chat_ids
+
+    payload = {
+        "ok": True,
+        "result": [
+            {"message": {"chat": {"id": 987654321, "first_name": "우재", "type": "private"}}},
+            {"message": {"chat": {"id": 987654321, "first_name": "우재", "type": "private"}}},
+        ],
+    }
+    assert extract_chat_ids(payload) == [("987654321", "우재")]
+
+
+def test_extract_chat_ids_handles_group_and_start_event():
+    from cgv_watch.cli import extract_chat_ids
+
+    payload = {
+        "result": [
+            {"my_chat_member": {"chat": {"id": -100200, "title": "영화방", "type": "group"}}},
+            {"message": {"chat": {"id": 55, "username": "someone", "type": "private"}}},
+        ]
+    }
+    assert extract_chat_ids(payload) == [("-100200", "영화방"), ("55", "someone")]
+
+
+def test_extract_chat_ids_empty_when_no_updates():
+    from cgv_watch.cli import extract_chat_ids
+
+    assert extract_chat_ids({"ok": True, "result": []}) == []

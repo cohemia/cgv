@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -95,6 +96,99 @@ def cmd_dump(args) -> int:
         out.write_text(html, encoding="utf-8")
         found = len(parse_showtimes(html, args.theater, play_ymd))
         print(f"{out} 저장 ({len(html):,} bytes, 회차 {found}개 파싱됨)")
+    return 0
+
+
+def extract_chat_ids(payload: dict) -> list[tuple[str, str]]:
+    """getUpdates 응답에서 (chat_id, 표시이름) 목록을 뽑는다."""
+    found: dict[str, str] = {}
+    for update in payload.get("result") or []:
+        for key in ("message", "edited_message", "channel_post", "my_chat_member"):
+            chat = (update.get(key) or {}).get("chat") or {}
+            cid = chat.get("id")
+            if cid is None:
+                continue
+            name = (
+                chat.get("title")
+                or " ".join(filter(None, [chat.get("first_name"), chat.get("last_name")]))
+                or chat.get("username")
+                or "(이름 없음)"
+            )
+            found[str(cid)] = name
+    return sorted(found.items())
+
+
+def cmd_telegram_id(args) -> int:
+    """봇 토큰을 검사하고 chat id 를 찾아준다. 주소창에 URL 을 직접 치는 것보다 안전하다."""
+    import requests
+
+    token = (args.token or os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
+    if not token:
+        print("토큰이 없습니다. --token 으로 주거나 .env 의 TELEGRAM_BOT_TOKEN 을 채우세요.",
+              file=sys.stderr)
+        return 1
+    if ":" not in token:
+        print(
+            "토큰 형식이 아닙니다. 숫자와 콜론이 함께 있어야 합니다 (예: 8012345678:AAEh...).\n"
+            "BotFather 메시지에서 'Use this token to access the HTTP API:' 아래 한 줄을 통째로 쓰세요.",
+            file=sys.stderr,
+        )
+        return 1
+
+    api = f"https://api.telegram.org/bot{token}/getUpdates"
+    try:
+        res = requests.get(api, timeout=15)
+    except requests.RequestException as exc:
+        print(f"텔레그램 접속 실패: {exc}", file=sys.stderr)
+        return 1
+
+    if res.status_code == 404:
+        print(
+            "❌ 토큰이 유효하지 않습니다 (404).\n"
+            "   흔한 원인:\n"
+            "     · /revoke 로 폐기한 옛 토큰을 쓰고 있음 → BotFather 의 최신 토큰을 쓰세요\n"
+            "     · 복사할 때 앞뒤가 잘림 → 콜론 앞 숫자부터 끝까지 통째로 복사\n"
+            "     · 예시 문구(<토큰> 같은 것)를 그대로 붙여넣음",
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        payload = res.json()
+    except ValueError:
+        print(f"응답을 이해할 수 없습니다: {res.text[:200]}", file=sys.stderr)
+        return 1
+    if not payload.get("ok"):
+        print(f"❌ 텔레그램 오류: {payload.get('description', payload)}", file=sys.stderr)
+        return 1
+
+    chats = extract_chat_ids(payload)
+    if not chats:
+        print(
+            "✅ 토큰은 정상입니다. 다만 대화 기록이 비어 있습니다.\n"
+            "   폰에서 봇 대화방을 열고 '시작(START)' 을 누른 뒤 아무 메시지나 한 번 보내고,\n"
+            "   이 명령을 다시 실행하세요."
+        )
+        return 1
+
+    print("✅ 토큰 정상. 찾은 chat id:\n")
+    for cid, name in chats:
+        print(f"   {cid}\t{name}")
+
+    if args.save:
+        env_path = Path(args.env_file)
+        lines = []
+        if env_path.is_file():
+            lines = [
+                ln
+                for ln in env_path.read_text(encoding="utf-8").splitlines()
+                if not ln.startswith(("TELEGRAM_BOT_TOKEN=", "TELEGRAM_CHAT_ID="))
+            ]
+        lines += [f"TELEGRAM_BOT_TOKEN={token}", f"TELEGRAM_CHAT_ID={chats[0][0]}"]
+        env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print(f"\n{env_path} 에 저장했습니다 (chat id {chats[0][0]}).")
+        print("`python -m cgv_watch test-notify` 로 실제로 오는지 확인하세요.")
+    else:
+        print("\n--save 를 붙이면 .env 에 바로 저장합니다.")
     return 0
 
 
@@ -271,6 +365,12 @@ def build_parser() -> argparse.ArgumentParser:
     lg = sub.add_parser("login", help="브라우저를 띄워 CGV 로그인 세션 저장")
     lg.add_argument("-c", "--config", default="config.yaml")
     lg.set_defaults(func=cmd_login)
+
+    tg = sub.add_parser("telegram-id", help="봇 토큰을 검사하고 chat id 를 찾아준다")
+    tg.add_argument("--token", help="봇 토큰 (생략하면 .env 의 TELEGRAM_BOT_TOKEN)")
+    tg.add_argument("--save", action="store_true", help="찾은 값을 .env 에 저장")
+    tg.add_argument("--env-file", default=".env")
+    tg.set_defaults(func=cmd_telegram_id)
 
     n = sub.add_parser("test-notify", help="알림 채널 점검")
     n.add_argument("-c", "--config", default="config.yaml")
