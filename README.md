@@ -26,6 +26,21 @@
 
 ---
 
+## 바로 쓰기 (미리 만들어둔 설정)
+
+`presets/` 에 완성된 설정이 있습니다. 복사만 하면 됩니다.
+
+```bash
+cp presets/odyssey-yongsan-20260814.yaml config.yaml
+python -m cgv_watch watch
+```
+
+| 프리셋 | 대상 |
+|---|---|
+| `odyssey-yongsan-20260814.yaml` | 8/14 CGV 용산아이파크몰 IMAX 오전 11시 〈오디세이〉, 1인 |
+
+---
+
 ## 설치
 
 ```bash

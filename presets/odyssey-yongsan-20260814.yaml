@@ -1,0 +1,57 @@
+# 2026-08-14(금) CGV 용산아이파크몰 IMAX 오전 11시 <오디세이> 한 회차만 감시.
+#
+# 사용법:
+#   cp presets/odyssey-yongsan-20260814.yaml config.yaml
+#   python -m cgv_watch watch
+# 또는 그대로 지정해서:
+#   python -m cgv_watch watch -c presets/odyssey-yongsan-20260814.yaml
+#
+# ⚠️ 시작 전 두 가지만 확인하세요.
+#   1) 극장 코드:  python -m cgv_watch theaters 용산
+#   2) 회차가 잡히는지:
+#      python -m cgv_watch showtimes --theater 0013 --date 2026-08-14 --movie 오디세이
+#      → 🔴 0석으로 뜨면 정상. 아무것도 안 나오면 time_from/to 나 movie_contains 를 넓혀보세요.
+
+poll:
+  interval_seconds: 25          # 한 회차만 보므로 요청량이 적어 조금 촘촘하게
+  jitter_seconds: 10
+  error_backoff_seconds: 60
+  max_error_backoff_seconds: 600
+  request_timeout: 10
+  stop_when_done: false         # 자동 예매가 실패해도 감시가 계속 돌도록 false 유지
+
+notify:
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+  desktop:
+    enabled: true
+    sound: true
+  console:
+    enabled: true
+
+booking:
+  enabled: true
+  mode: seat_select
+  seat_count: 1                 # 👤 인원. 2명이면 여기와 아래 min_seats 를 함께 2로
+  prefer_adjacent: true
+  user_data_dir: ".playwright/cgv-profile"
+  headless: false               # 결제는 직접 눌러야 하므로 반드시 false
+  step_timeout_seconds: 20
+  screenshot_dir: "screenshots"
+
+state_file: "state.json"
+
+targets:
+  - name: "오디세이 용산 IMAX 8/14 11시"
+    theater_code: "0013"        # CGV 용산아이파크몰 — 위 1)로 꼭 확인
+    theater_name: "CGV 용산아이파크몰"
+    dates: ["2026-08-14"]
+    movie_contains: "오디세이"   # "더 오디세이" 로 등록돼 있어도 잡힘
+    screen_contains: "IMAX"
+    time_from: "10:30"          # 11:00 회차를 놓치지 않도록 앞뒤로 약간 여유
+    time_to: "11:30"
+    min_seats: 1                # 👤 인원과 동일하게
+    cooldown_minutes: 5         # 당일 임박 상황이라 짧게
+    auto_book: true
